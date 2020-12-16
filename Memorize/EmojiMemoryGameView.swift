@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  EmojiMemoryGameView.swift
 //  Memorize
 //
 //  Created by Austin Zheng on 2020/12/14.
@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct EmojiMemoryGameView: View {
-    var viewModel: EmojiMemoryGame
+    @ObservedObject var viewModel: EmojiMemoryGame
     
     var body: some View {
          HStack {
@@ -20,7 +20,6 @@ struct EmojiMemoryGameView: View {
         }
             .foregroundColor(Color.orange)
             .padding()
-            .font(Font.largeTitle)
     }
 }
 
@@ -30,16 +29,36 @@ struct EmojiMemoryGameView: View {
 struct CardView: View {
     var card: MemoryGame<String>.Card
     var body: some View {
+        GeometryReader { geometry in
+            body(for: geometry.size)
+        }
+            
+    }
+    
+    func body(for size: CGSize) -> some View {
         ZStack {
             if card.isFaceUp {
-                RoundedRectangle(cornerRadius: 10.0).fill(Color.white)
-                RoundedRectangle(cornerRadius: 10.0).stroke(lineWidth: 3.0)
+                RoundedRectangle(cornerRadius: connerRadius).fill(Color.white)
+                RoundedRectangle(cornerRadius: connerRadius).stroke(lineWidth: edgeLineWidth)
                 Text(card.content)
             } else {
-                RoundedRectangle(cornerRadius: 10.0).fill()
+                RoundedRectangle(cornerRadius: connerRadius).fill()
             }
         }
+        .font(Font.system(size: fontSize(for: size)))
     }
+    
+    func fontSize(for size: CGSize) -> CGFloat {
+        min(size.width, size.height) * frontScaleFactor
+    }
+    
+    
+    
+    let connerRadius: CGFloat = 10.0
+    let edgeLineWidth: CGFloat = 3.0
+    let frontScaleFactor: CGFloat = 0.75
+    
+    
 }
 
 
