@@ -10,13 +10,26 @@ import SwiftUI
 struct EmojiMemoryGameView: View {
     @ObservedObject var viewModel: EmojiMemoryGame
     var body: some View {
-        Grid(viewModel.cards) { card in
-            CardView(card: card).onTapGesture {
-                viewModel.choose(card: card)
+        
+        VStack {
+            Grid(viewModel.cards) { card in
+                CardView(card: card).onTapGesture {
+                    withAnimation(.linear(duration: 1)){
+                        viewModel.choose(card: card)
+                    }
+                }
             }
+                .foregroundColor(Color.orange)
+                .padding()
+            
+            Button(action: {
+                withAnimation(.easeInOut(duration: 2)) {
+                    self.viewModel.resetGame()
+                }
+            }, label: { Text("New Game") })
         }
-            .foregroundColor(Color.orange)
-            .padding()
+        
+        
     }
 }
 
@@ -29,41 +42,57 @@ struct CardView: View {
         GeometryReader { geometry in
             body(for: geometry.size)
         }
-            
     }
     
-    func body(for size: CGSize) -> some View {
-        ZStack {
-            if card.isFaceUp {
-                RoundedRectangle(cornerRadius: connerRadius).fill(Color.white)
-                RoundedRectangle(cornerRadius: connerRadius).stroke(lineWidth: edgeLineWidth)
-                Text(card.content)
-            } else {
-                if !card.isMatchd {
-                    RoundedRectangle(cornerRadius: connerRadius).fill()
-                }
-            }
+    @State private var animatedBonusRemaining: Double = 0
+    
+    private func startBonusTimeAnimation() {
+        animatedBonusRemaining = card.bonusRemainning
+        withAnimation(.linear(duration: card.bonusTimeRemaining)) {
+            animatedBonusRemaining = 0
         }
-        .font(Font.system(size: fontSize(for: size)))
-    }
-    
-    func fontSize(for size: CGSize) -> CGFloat {
-        min(size.width, size.height) * frontScaleFactor
     }
     
     
+    @ViewBuilder
+    private func body(for size: CGSize) -> some View {
+        if card.isFaceUp || !card.isMatched {
+            ZStack {
+                Group {
+                    if card.isConsumingBonusTime {
+                        Pie(startAngle: Angle.degrees(0-90), endAngle: Angle.degrees(-animatedBonusRemaining*360-90), clockwise: true)
+                            .onAppear {
+                                startBonusTimeAnimation()
+                            }
+                    } else {
+                        Pie(startAngle: Angle.degrees(0-90), endAngle: Angle.degrees(-card.bonusRemainning*360-90), clockwise: true)
+                    }
+                }
+                .padding(5).opacity(0.4)
+                .transition(.identity)
+                
+                
+                
+                Text(card.content)
+                    .font(Font.system(size: fontSize(for: size)))
+                    .rotationEffect(Angle.degrees(card.isMatched ? 360 : 0))
+                    .animation(card.isMatched ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default)
+            }
+            .cardify(isFaceUp: card.isFaceUp)
+            .transition(AnyTransition.scale)
+        }
+        
+        
+    }
     
-    let connerRadius: CGFloat = 10.0
-    let edgeLineWidth: CGFloat = 3.0
-    let frontScaleFactor: CGFloat = 0.75
+    private func fontSize(for size: CGSize) -> CGFloat {
+        min(size.width, size.height) * 0.70
+    }
     
     
     
     
 }
-
-
-
 
 
 

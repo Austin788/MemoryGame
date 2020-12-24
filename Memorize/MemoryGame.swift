@@ -8,9 +8,9 @@
 import Foundation
 
 struct MemoryGame<CardContent> where CardContent: Equatable {
-    var cards: Array<Card>
+    private(set) var cards: Array<Card>
     
-    var indexOfTheOneAndOnlyFaceUpCard: Int?{
+    private var indexOfTheOneAndOnlyFaceUpCard: Int?{
         get{
 //
 //            var faceUpCardIndices = [Int]()
@@ -28,21 +28,17 @@ struct MemoryGame<CardContent> where CardContent: Equatable {
         }
     }
     
-    var name: String {
-        return "123"
-    }
-    
     
     
     
     
     mutating func choose(card: Card) {
         print("card chosen: \(card)")
-        if let chosenIndex: Int = cards.firstIndex(matching: card), !cards[chosenIndex].isFaceUp, !cards[chosenIndex].isMatchd {
+        if let chosenIndex: Int = cards.firstIndex(matching: card), !cards[chosenIndex].isFaceUp, !cards[chosenIndex].isMatched {
             if let potentialMatchIndex = indexOfTheOneAndOnlyFaceUpCard {
                 if cards[chosenIndex].content == cards[potentialMatchIndex].content {
-                    cards[chosenIndex].isMatchd = true
-                    cards[potentialMatchIndex].isMatchd = true
+                    cards[chosenIndex].isMatched = true
+                    cards[potentialMatchIndex].isMatched = true
                 }
                 cards[chosenIndex].isFaceUp = true
             }else{
@@ -67,12 +63,82 @@ struct MemoryGame<CardContent> where CardContent: Equatable {
             cards.append(Card(content: content, id: pairIndex*2))
             cards.append(Card(content: content, id: pairIndex*2+1))
         }
+        cards.shuffle()
     }
     
     struct Card: Identifiable {
-        var isFaceUp: Bool = false
-        var isMatchd: Bool = false
+        var isFaceUp: Bool = false {
+            didSet {
+                if isFaceUp {
+                    startUsingBonusTime()
+                } else {
+                    stopUsingBonusTime()
+                }
+            }
+        }
+        var isMatched: Bool = false {
+            didSet {
+                stopUsingBonusTime()
+            }
+        }
         var content: CardContent
         var id: Int
+        
+        
+        
+        
+        //MARK: -- Bonus Time
+        var bonusTimeLimit: TimeInterval = 6
+        
+        // 卡牌已经朝上展示过的时间
+        private var faceUpTime: TimeInterval {
+            if let lastFaceUpDate = self.lastFaceUpDate {
+                return pastFaceUpTime + Date().timeIntervalSince(lastFaceUpDate)
+            } else {
+                return pastFaceUpTime
+            }
+        }
+        
+        // 上一次翻过来的时间
+        var lastFaceUpDate: Date?
+        
+        // 记录本次翻过来之前朝上的时间
+        var pastFaceUpTime: TimeInterval = 0
+        
+        // 剩余时间
+        var bonusTimeRemaining: TimeInterval {
+            max(0, bonusTimeLimit - faceUpTime)
+        }
+        
+        // 剩余时间比百分比
+        var bonusRemainning: Double {
+            (bonusTimeLimit > 0 && bonusTimeRemaining > 0) ? bonusTimeRemaining / bonusTimeLimit : 0
+        }
+        
+        // 是否获得得分
+        var hasEarnedBonus: Bool {
+            isMatched && bonusTimeRemaining > 0
+        }
+        
+        // 是否用完了时间
+        var isConsumingBonusTime: Bool {
+            isFaceUp && !isMatched && bonusTimeRemaining > 0
+        }
+        
+        private mutating func startUsingBonusTime() {
+            if isConsumingBonusTime, lastFaceUpDate == nil {
+                lastFaceUpDate = Date()
+            }
+        }
+        
+        // 当牌被翻回去，或者匹配上了
+        private mutating func stopUsingBonusTime() {
+            pastFaceUpTime = faceUpTime
+            self.lastFaceUpDate = nil
+        }
+        
+        
     }
+    
+    
 }
